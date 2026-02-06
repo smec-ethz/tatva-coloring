@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/icon.png" alt="drawing" height="150"/>
+
 <h3 align="center">tatva-coloring : coloring for tatva</h3>
 
 Simple matrix coloring for sparse differentiation. Implemented in Rust with Python bindings.
