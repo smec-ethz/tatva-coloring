@@ -1,0 +1,22 @@
+[project]
+name = "tatva-coloring"
+version = "0.0.1"
+description = "Matrix coloring algorithms for tatva implemented in Rust."
+authors = [
+    { name = "florez", email = "florez@ethz.ch" }
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+]
+dependencies = ["numpy"]
+
+[build-system]
+requires = ["maturin>=1.6"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "tatva_coloring._tatva_coloring"
+python-source = "python"
