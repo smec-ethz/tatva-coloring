@@ -6,9 +6,11 @@ authors = [
     { name = "florez", email = "florez@ethz.ch" }
 ]
 requires-python = ">=3.11"
+readme = { file = "README.md", content-type = "text/markdown" }
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 dependencies = ["numpy"]
 
@@ -20,3 +22,6 @@ build-backend = "maturin"
 features = ["pyo3/extension-module"]
 module-name = "tatva_coloring._tatva_coloring"
 python-source = "python"
+
+[project.urls]
+repository = "https://github.com/smec-ethz/tatva-coloring"
