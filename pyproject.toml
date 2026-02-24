@@ -1,6 +1,6 @@
 [project]
 name = "tatva-coloring"
-version = "0.0.1"
+version = "0.0.2"
 description = "Matrix coloring algorithms for tatva implemented in Rust."
 authors = [
     { name = "florez", email = "florez@ethz.ch" }
