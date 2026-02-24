@@ -10,10 +10,35 @@ fn distance2_color_and_seeds(
     row_ptr: PyReadonlyArray1<'_, i64>,
     col_idx: PyReadonlyArray1<'_, i64>,
     n_dofs: usize,
-) -> PyResult<(Py<PyArray1<i32>>, Vec<Py<PyArray1<f64>>>)> {
+) -> PyResult<(Py<PyArray1<i32>>, Vec<Py<PyArray1<bool>>>)> {
     let row_ptr = row_ptr.as_slice()?;
     let col_idx = col_idx.as_slice()?;
 
+    let colors = distance2_colors_impl(row_ptr, col_idx, n_dofs)?;
+
+    // Pack outputs for Python: colors as np.int32 and seeds as list of bool.
+    let colors_py = PyArray1::from_iter(py, colors.iter().map(|&c| c as i32)).unbind();
+    let seeds = seeds_from_colors(py, &colors)?;
+
+    Ok((colors_py, seeds))
+}
+
+/// Compute distance-2 colors for a CSR sparse matrix.
+#[pyfunction]
+fn distance2_colors(
+    py: Python<'_>,
+    row_ptr: PyReadonlyArray1<'_, i64>,
+    col_idx: PyReadonlyArray1<'_, i64>,
+    n_dofs: usize,
+) -> PyResult<Py<PyArray1<i32>>> {
+    let row_ptr = row_ptr.as_slice()?;
+    let col_idx = col_idx.as_slice()?;
+    let colors = distance2_colors_impl(row_ptr, col_idx, n_dofs)?;
+    Ok(PyArray1::from_iter(py, colors.iter().map(|&c| c as i32)).unbind())
+}
+
+/// Internal distance-2 coloring from CSR storage.
+fn distance2_colors_impl(row_ptr: &[i64], col_idx: &[i64], n_dofs: usize) -> PyResult<Vec<usize>> {
     if row_ptr.len() != n_dofs + 1 {
         return Err(pyo3::exceptions::PyValueError::new_err(
             "row_ptr length must be n_dofs + 1",
@@ -33,13 +58,7 @@ fn distance2_color_and_seeds(
     let adjacency2 = distance2_adjacency(&adjacency);
 
     // Greedy coloring on distance-2 adjacency.
-    let colors = greedy_color(&adjacency2);
-
-    // Pack outputs for Python: colors as np.int32 and seeds as list of float64.
-    let colors_py = PyArray1::from_iter(py, colors.iter().map(|&c| c as i32)).unbind();
-    let seeds = seeds_from_colors(py, &colors)?;
-
-    Ok((colors_py, seeds))
+    Ok(greedy_color(&adjacency2))
 }
 
 /// Compute distance-2 adjacency from 1-hop adjacency.
@@ -62,8 +81,7 @@ fn distance2_adjacency(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
         }
     }
 
-    adj2
-        .into_iter()
+    adj2.into_iter()
         .map(|set| {
             let mut v: Vec<usize> = set.into_iter().collect();
             v.sort_unstable();
@@ -95,8 +113,8 @@ fn greedy_color(adjacency: &[Vec<usize>]) -> Vec<usize> {
     colors
 }
 
-/// Generate one-hot seeds per color (float64).
-fn seeds_from_colors(py: Python<'_>, colors: &[usize]) -> PyResult<Vec<Py<PyArray1<f64>>>> {
+/// Generate one-hot seeds per color (bool).
+fn seeds_from_colors(py: Python<'_>, colors: &[usize]) -> PyResult<Vec<Py<PyArray1<bool>>>> {
     if colors.is_empty() {
         return Ok(Vec::new());
     }
@@ -106,10 +124,10 @@ fn seeds_from_colors(py: Python<'_>, colors: &[usize]) -> PyResult<Vec<Py<PyArra
 
     let mut seeds = Vec::with_capacity(n_colors);
     for color in 0..n_colors {
-        let mut seed = vec![0f64; n];
+        let mut seed = vec![false; n];
         for (idx, &c) in colors.iter().enumerate() {
             if c == color {
-                seed[idx] = 1.0;
+                seed[idx] = true;
             }
         }
         seeds.push(PyArray1::from_vec(py, seed).unbind());
@@ -121,5 +139,6 @@ fn seeds_from_colors(py: Python<'_>, colors: &[usize]) -> PyResult<Vec<Py<PyArra
 #[pymodule]
 fn _tatva_coloring(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(distance2_color_and_seeds, m)?)?;
+    m.add_function(wrap_pyfunction!(distance2_colors, m)?)?;
     Ok(())
 }
